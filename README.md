@@ -1,71 +1,32 @@
-# SignLens
+# SignLens — Street Sign Translator
 
-A real-time street sign detection and translation web application.
+Real-time street sign OCR and translation. Python FastAPI backend + light-themed frontend.
 
-## Features
-
-- Upload or capture street sign images via webcam
-- Automatic text extraction from signs
-- Translation into 10 languages
-- Clean responsive UI
-
-## Supported Languages
-
-- Kannada
-- Telugu
-- Tamil
-- Marathi
-- Malayalam
-- Hindi
-- English
-- French
-- Spanish
-- Arabic
-
-## Tech Stack
-
-- **Backend:** Java 17, Spring Boot 3.2, Maven
-- **Frontend:** HTML, CSS, JavaScript
-- **AI:** Vision API for OCR and translation
-
-## Getting Started
-
-### Prerequisites
-- Java 17+
-- Maven 3.8+
-
-### Run locally
+## Run on Linux/Mac
 
 ```bash
-export ANTHROPIC_API_KEY=your_api_key
-mvn spring-boot:run
+# Step 1: Install Tesseract
+sudo apt install tesseract-ocr -y        # Ubuntu/Linux
+# brew install tesseract                 # Mac
+
+# Step 2: Run the app
+bash run.sh
+
+# Step 3: Open browser
+# http://localhost:8000
 ```
 
-Open `http://localhost:8080` in your browser.
+## Run on Windows
 
-## API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/languages` | List supported languages |
-| POST | `/api/process-image` | Upload image for OCR + translation |
-
-## Project Structure
-
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
-src/
-└── main/
-    ├── java/com/signlens/
-    │   ├── SignLensApplication.java
-    │   ├── controller/SignLensController.java
-    │   ├── service/AIVisionService.java
-    │   └── model/
-    └── resources/
-        ├── application.properties
-        └── static/index.html
-```
+Then open http://localhost:8000
 
-## License
+## Languages
+Kannada · Telugu · Tamil · Marathi · Malayalam · Hindi · English · French · Spanish · Arabic
 
-MIT
+## Stack
+- Python 3.10+ · FastAPI · Tesseract OCR · OpenCV · deep-translator
