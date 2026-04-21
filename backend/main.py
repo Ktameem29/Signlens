@@ -1,6 +1,6 @@
 """
 SignLens - main.py
-FastAPI backend for Street Sign Detection and Translation
+FastAPI backend — Street Sign Detection & Translation
 Run: uvicorn main:app --reload --port 8000
 """
 
@@ -10,7 +10,7 @@ import logging
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from PIL import Image
 
@@ -20,7 +20,7 @@ from translator import translate
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SignLens API", version="2.0.0")
+app = FastAPI(title="SignLens API", version="3.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,23 +29,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve frontend static files
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
 
 class TranslateRequest(BaseModel):
     text: str
     target_language: str
 
-@app.get("/")
-def root():
-    index_path = os.path.join(FRONTEND_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"status": "ok", "message": "SignLens API running"}
-
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "SignLens API v2.0"}
+    return {"status": "ok", "service": "SignLens API v3.0"}
 
 @app.get("/api/languages")
 def languages():
@@ -67,8 +59,9 @@ async def upload_image(
     file: UploadFile = File(...),
     language: str = Form(default="en")
 ):
-    allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
-    if file.content_type not in allowed:
+    allowed = ["image/jpeg","image/jpg","image/png","image/webp"]
+    ct = (file.content_type or "").lower()
+    if ct not in allowed:
         raise HTTPException(400, f"Unsupported file type. Use JPG, PNG or WEBP.")
 
     image_bytes = await file.read()
@@ -80,27 +73,33 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(400, f"Cannot read image: {e}")
 
+    # OCR
     try:
         ocr_result = extract_text(pil_image)
     except Exception as e:
+        logger.error(f"OCR error: {e}")
         raise HTTPException(500, f"OCR failed: {e}")
-
-    if not ocr_result["text"].strip():
-        raise HTTPException(422, "No text detected. Try a clearer photo of the sign.")
 
     detected = ocr_result["text"].strip()
     confidence = ocr_result["confidence"]
     preprocessed_b64 = ocr_result["preprocessed_b64"]
 
+    if not detected:
+        raise HTTPException(422, "No text detected. Try a clearer photo with visible text.")
+
+    # Translate
+    translated = detected  # default fallback
     try:
-        translated = translate(detected, language)
+        result = translate(detected, language)
+        if result:
+            translated = result
     except Exception as e:
-        translated = detected
+        logger.error(f"Translation error: {e}")
 
     return {
         "status": "success",
         "detected_text": detected,
-        "translated_text": translated or detected,
+        "translated_text": translated,
         "confidence": round(confidence, 1),
         "target_language": language,
         "preprocessed_image": preprocessed_b64
@@ -115,6 +114,6 @@ def translate_only(req: TranslateRequest):
         raise HTTPException(503, "Translation unavailable.")
     return {"original": req.text, "translated": result, "language": req.target_language}
 
-# Serve frontend files
+# Serve frontend
 if os.path.isdir(FRONTEND_DIR):
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
