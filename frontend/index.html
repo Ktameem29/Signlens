@@ -295,6 +295,7 @@ footer{position:relative;z-index:5;padding:16px 48px;border-top:1px solid var(--
           <span class="rt rtt">Translation</span>
           <span class="lu" id="langUsed"></span>
           <button class="cp" onclick="doCopy('trOut',this)">Copy</button>
+          <button class="cp" id="speakBtn" onclick="speakText()" style="margin-left:4px">🔊 Speak</button>
         </div>
         <div class="rtxt rtxt-tr" id="trOut"></div>
       </div>
@@ -314,6 +315,7 @@ footer{position:relative;z-index:5;padding:16px 48px;border-top:1px solid var(--
 <script>
 var API=window.location.origin;
 var LN={en:"English",kn:"Kannada",te:"Telugu",ta:"Tamil",mr:"Marathi",ml:"Malayalam",hi:"Hindi",fr:"French",es:"Spanish",ar:"Arabic"};
+var LANG_LOCALE={en:"en-US",kn:"kn-IN",te:"te-IN",ta:"ta-IN",mr:"mr-IN",ml:"ml-IN",hi:"hi-IN",fr:"fr-FR",es:"es-ES",ar:"ar-SA"};
 var selLang="en",curBlob=null,mStream=null,camOn=false;
 var vph=document.getElementById("vph"),vpVideo=document.getElementById("vpVideo"),vpImg=document.getElementById("vpImg"),bboxC=document.getElementById("bboxC"),recDot=document.getElementById("recDot"),camBtn=document.getElementById("camBtn"),camTxt=document.getElementById("camTxt"),capBtn=document.getElementById("capBtn"),procBtn=document.getElementById("procBtn"),errBox=document.getElementById("errBox"),emptyEl=document.getElementById("emptyEl"),resEl=document.getElementById("resEl"),confFill=document.getElementById("confFill"),confVal=document.getElementById("confVal"),detOut=document.getElementById("detOut"),trOut=document.getElementById("trOut"),langUsed=document.getElementById("langUsed"),preCard=document.getElementById("preCard"),preImg=document.getElementById("preImg"),s1=document.getElementById("s1"),s2=document.getElementById("s2"),s3=document.getElementById("s3"),sdot=document.getElementById("sdot"),stxt=document.getElementById("stxt");
 
@@ -387,6 +389,19 @@ function process(){
 }
 
 function drawBox(){if(vpImg.style.display==="none")return;bboxC.style.display="block";var w=vpImg.clientWidth||vpImg.naturalWidth,h=vpImg.clientHeight||vpImg.naturalHeight;bboxC.width=w;bboxC.height=h;var rect=vpImg.getBoundingClientRect();bboxC.style.width=rect.width+"px";bboxC.style.height=rect.height+"px";var ctx=bboxC.getContext("2d");ctx.clearRect(0,0,w,h);var m=.12,x=w*m,y=h*.2,bw=w*(1-2*m),bh=h*.6;ctx.strokeStyle="rgba(37,99,212,.75)";ctx.lineWidth=2;ctx.setLineDash([7,4]);ctx.strokeRect(x,y,bw,bh);var cs=13;ctx.setLineDash([]);ctx.lineWidth=2.5;[[x,y],[x+bw,y],[x,y+bh],[x+bw,y+bh]].forEach(function(p,i){var sx=i%2===0?cs:-cs,sy=i<2?cs:-cs;ctx.beginPath();ctx.moveTo(p[0]+sx,p[1]);ctx.lineTo(p[0],p[1]);ctx.lineTo(p[0],p[1]+sy);ctx.stroke();});}
+function speakText(){
+  var text=document.getElementById("trOut").textContent.trim();
+  if(!text||!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(text);
+  u.lang=LANG_LOCALE[selLang]||"en-US";
+  u.rate=0.9;
+  var btn=document.getElementById("speakBtn");
+  btn.textContent="🔊 Speaking...";
+  u.onend=function(){btn.textContent="🔊 Speak";};
+  u.onerror=function(){btn.textContent="🔊 Speak";};
+  window.speechSynthesis.speak(u);
+}
 resetRes();
 </script>
 </body>
