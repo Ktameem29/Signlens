@@ -12,7 +12,7 @@ def _pil_to_b64(pil_image: Image.Image) -> str:
     return base64.standard_b64encode(buf.getvalue()).decode("utf-8")
 
 def describe_sign(pil_image: Image.Image) -> str | None:
-    """Use Claude vision to identify and describe the sign in the image."""
+    """Use Claude vision to identify all signs in the image."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return None
@@ -22,7 +22,7 @@ def describe_sign(pil_image: Image.Image) -> str | None:
         b64 = _pil_to_b64(pil_image)
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=150,
+            max_tokens=200,
             messages=[{
                 "role": "user",
                 "content": [
@@ -33,12 +33,12 @@ def describe_sign(pil_image: Image.Image) -> str | None:
                     {
                         "type": "text",
                         "text": (
-                            "This is a street sign or road sign image. "
-                            "Identify exactly what the sign says or means in plain English. "
-                            "If it is a text sign, return the exact text. "
-                            "If it is a symbol sign (e.g. pedestrian crossing, no entry, speed limit), "
-                            "describe it in 2-5 words (e.g. 'Pedestrian Crossing', 'No Entry', 'Speed Limit 50'). "
-                            "Reply with ONLY the sign text or description, nothing else."
+                            "Look at this image and identify ALL road signs or street signs visible. "
+                            "For each sign: if it has text, give the exact text. "
+                            "If it is a symbol (arrow, pedestrian, etc.), describe it briefly. "
+                            "List all signs separated by ' | '. "
+                            "Examples: 'STOP | Turn Right Arrow' or 'Speed Limit 50 | No Parking' or 'Pedestrian Crossing'. "
+                            "Reply with ONLY the sign descriptions, nothing else."
                         )
                     }
                 ]

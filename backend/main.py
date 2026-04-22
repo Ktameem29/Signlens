@@ -67,28 +67,27 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(400, f"Cannot read image: {e}")
 
-    # Step 1: Try OCR
     detected = ""
     confidence = 0.0
     preprocessed_b64 = ""
     used_vision = False
 
-    try:
-        ocr_result = extract_text(pil_image)
-        detected = ocr_result["text"].strip()
-        confidence = ocr_result["confidence"]
-        preprocessed_b64 = ocr_result["preprocessed_b64"]
-    except Exception as e:
-        logger.error(f"OCR error: {e}")
-
-    # Step 2: If OCR result is weak, use Claude vision
-    if not detected or confidence < 60:
-        logger.info("OCR confidence low, trying vision fallback")
-        vision_result = describe_sign(pil_image)
-        if vision_result:
-            detected = vision_result
-            confidence = 95.0
-            used_vision = True
+    # Step 1: Try Claude vision first (handles all sign types including symbols)
+    vision_result = describe_sign(pil_image)
+    if vision_result:
+        detected = vision_result
+        confidence = 95.0
+        used_vision = True
+        logger.info(f"Vision result: {detected}")
+    else:
+        # Step 2: Fall back to OCR
+        try:
+            ocr_result = extract_text(pil_image)
+            detected = ocr_result["text"].strip()
+            confidence = ocr_result["confidence"]
+            preprocessed_b64 = ocr_result["preprocessed_b64"]
+        except Exception as e:
+            logger.error(f"OCR error: {e}")
 
     if not detected:
         raise HTTPException(422, "Could not read this sign. Try a clearer photo.")
