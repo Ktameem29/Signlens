@@ -308,17 +308,17 @@ footer{position:relative;z-index:5;padding:16px 48px;border-top:1px solid var(--
 
 <footer>
   <div class="flog">SignLens</div>
-  <div class="ftech">Python FastAPI · Tesseract OCR · 10 Languages · localhost:8000</div>
+  <div class="ftech">Python FastAPI · Tesseract OCR · 10 Languages</div>
 </footer>
 
 <script>
-var API="http://localhost:8000";
+var API=window.location.origin;
 var LN={en:"English",kn:"Kannada",te:"Telugu",ta:"Tamil",mr:"Marathi",ml:"Malayalam",hi:"Hindi",fr:"French",es:"Spanish",ar:"Arabic"};
 var selLang="en",curBlob=null,mStream=null,camOn=false;
 var vph=document.getElementById("vph"),vpVideo=document.getElementById("vpVideo"),vpImg=document.getElementById("vpImg"),bboxC=document.getElementById("bboxC"),recDot=document.getElementById("recDot"),camBtn=document.getElementById("camBtn"),camTxt=document.getElementById("camTxt"),capBtn=document.getElementById("capBtn"),procBtn=document.getElementById("procBtn"),errBox=document.getElementById("errBox"),emptyEl=document.getElementById("emptyEl"),resEl=document.getElementById("resEl"),confFill=document.getElementById("confFill"),confVal=document.getElementById("confVal"),detOut=document.getElementById("detOut"),trOut=document.getElementById("trOut"),langUsed=document.getElementById("langUsed"),preCard=document.getElementById("preCard"),preImg=document.getElementById("preImg"),s1=document.getElementById("s1"),s2=document.getElementById("s2"),s3=document.getElementById("s3"),sdot=document.getElementById("sdot"),stxt=document.getElementById("stxt");
 
-function checkBE(){fetch(API+"/api/health").then(function(r){if(r.ok){sdot.className="sdot on";stxt.className="stxt on";stxt.textContent="Backend online — localhost:8000 ✓";}else setOff();}).catch(setOff);}
-function setOff(){sdot.className="sdot off";stxt.className="stxt off";stxt.textContent="Backend offline — run: cd backend && uvicorn main:app --reload --port 8000";}
+function checkBE(){fetch(API+"/api/health").then(function(r){if(r.ok){sdot.className="sdot on";stxt.className="stxt on";stxt.textContent="Backend online ✓";}else setOff();}).catch(setOff);}
+function setOff(){sdot.className="sdot off";stxt.className="stxt off";stxt.textContent="Backend offline";}
 checkBE();setInterval(checkBE,5000);
 
 function selL(el){document.querySelectorAll(".lc").forEach(function(c){c.classList.remove("on");});el.classList.add("on");selLang=el.getAttribute("data-l");}
@@ -380,7 +380,7 @@ function process(){
     rSteps();emptyEl.style.display="flex";
     var msg=e.message||"Error";
     if(msg.toLowerCase().indexOf("fetch")!==-1||msg.toLowerCase().indexOf("failed")!==-1)
-      showErr("Cannot reach backend.\n\nRun in terminal:\n  cd backend\n  source venv/bin/activate\n  uvicorn main:app --reload --port 8000");
+      showErr("Cannot reach backend. Please try again.");
     else showErr(msg);
     setLoad(false);
   });
