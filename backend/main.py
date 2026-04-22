@@ -1,26 +1,20 @@
-"""
-SignLens - main.py
-FastAPI backend — Street Sign Detection & Translation
-Run: uvicorn main:app --reload --port 8000
-"""
-
 import io
 import os
 import logging
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from PIL import Image
 
 from ocr import extract_text
 from translator import translate
+from vision import describe_sign
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SignLens API", version="3.0.0")
+app = FastAPI(title="SignLens API", version="4.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,7 +31,7 @@ class TranslateRequest(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "SignLens API v3.0"}
+    return {"status": "ok", "service": "SignLens API v4.0"}
 
 @app.get("/api/languages")
 def languages():
@@ -62,7 +56,7 @@ async def upload_image(
     allowed = ["image/jpeg","image/jpg","image/png","image/webp"]
     ct = (file.content_type or "").lower()
     if ct not in allowed:
-        raise HTTPException(400, f"Unsupported file type. Use JPG, PNG or WEBP.")
+        raise HTTPException(400, "Unsupported file type. Use JPG, PNG or WEBP.")
 
     image_bytes = await file.read()
     if not image_bytes:
@@ -73,22 +67,34 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(400, f"Cannot read image: {e}")
 
-    # OCR
+    # Step 1: Try OCR
+    detected = ""
+    confidence = 0.0
+    preprocessed_b64 = ""
+    used_vision = False
+
     try:
         ocr_result = extract_text(pil_image)
+        detected = ocr_result["text"].strip()
+        confidence = ocr_result["confidence"]
+        preprocessed_b64 = ocr_result["preprocessed_b64"]
     except Exception as e:
         logger.error(f"OCR error: {e}")
-        raise HTTPException(500, f"OCR failed: {e}")
 
-    detected = ocr_result["text"].strip()
-    confidence = ocr_result["confidence"]
-    preprocessed_b64 = ocr_result["preprocessed_b64"]
+    # Step 2: If OCR result is weak, use Claude vision
+    if not detected or confidence < 60:
+        logger.info("OCR confidence low, trying vision fallback")
+        vision_result = describe_sign(pil_image)
+        if vision_result:
+            detected = vision_result
+            confidence = 95.0
+            used_vision = True
 
     if not detected:
-        raise HTTPException(422, "No text detected. Try a clearer photo with visible text.")
+        raise HTTPException(422, "Could not read this sign. Try a clearer photo.")
 
-    # Translate
-    translated = detected  # default fallback
+    # Step 3: Translate
+    translated = detected
     try:
         result = translate(detected, language)
         if result:
@@ -102,7 +108,8 @@ async def upload_image(
         "translated_text": translated,
         "confidence": round(confidence, 1),
         "target_language": language,
-        "preprocessed_image": preprocessed_b64
+        "preprocessed_image": preprocessed_b64,
+        "used_vision": used_vision
     }
 
 @app.post("/api/translate")
@@ -114,6 +121,5 @@ def translate_only(req: TranslateRequest):
         raise HTTPException(503, "Translation unavailable.")
     return {"original": req.text, "translated": result, "language": req.target_language}
 
-# Serve frontend
 if os.path.isdir(FRONTEND_DIR):
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
